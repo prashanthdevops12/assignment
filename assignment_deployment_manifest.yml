@@ -1,0 +1,20 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: assignment-deployment
+  namespace: assignment
+spec:
+  selector:
+    matchLabels:
+      app: assignment
+  replicas: 4
+  template:
+    metadata:
+      labels:
+        app: assignment
+    spec:
+      containers:
+      - name: assignment
+        image:
+        ports:
+        - containerPort: 80
