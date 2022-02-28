@@ -1,0 +1,5 @@
+---
+# vars file for docker
+docker_hub_passwd_id: **********
+docker_hub_user_id: ********
+pub_ip_k8: ************

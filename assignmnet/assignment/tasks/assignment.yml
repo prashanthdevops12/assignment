@@ -1,0 +1,83 @@
+---
+
+- name: Update and upgrade apt packages
+  apt:
+    #upgrade: yes
+    update_cache: yes
+
+- name: Install pip
+  apt: 
+    name: python-pip 
+    state: present
+  
+- name: install docker-py package
+  pip:
+    name: docker-py
+
+
+- name: Cloning the Code from VCS
+  git:
+    repo:
+    dest: /opt/
+    delegate_to: localhost
+    ignore_errors: yes
+    
+- name: Stoping the assignment container
+  docker_container:
+    name: assignment
+    state: stopped
+  ignore_errors: yes
+
+- name: removeing assignment container
+  docker_container:
+    name: assignment
+    state: absent
+  ignore_errors: yes
+
+- name: Removing assignment image
+  docker_image:
+    state: absent
+    name: 
+  ignore_errors: yes
+
+- name: building assignment image
+  docker_image:
+    name: assignment
+    build:
+      path: /opt/assignment
+    source: build
+    state: present
+  ignore_errors: yes
+
+- name: deploying the  assignment image to container
+  docker_container:
+    name: assignment
+    image: assignment
+   # publish_all_ports: yes
+    ports:
+     - "5000:80"
+  ignore_errors: yes
+
+- name: logining dockerhub
+  shell: sudo docker login -u "{{docker_hub_user_id}}" -p {{docker_hub_passwd_id}}
+  ignore_errors: yes
+
+- name: taging  the  assignment image to dockerhub
+  shell: sudo docker tag assignment "{{docker_hub_user_id}}"/assignment
+  ignore_errors: yes
+
+- name: pushing  the  assignment image to dockerhub
+  shell:  sudo docker push "{{docker_hub_user_id}}"/assignment
+  ignore_errors: yes
+
+- name: copying the k8 manifest file to k8 master
+  copy:
+    src: assignment.yml
+    dest: /opt/
+  delegate_to: "{{ pub_ip__k8 }}" 
+
+- name: to create or launch the pods of httpbin
+  shell: kubectl create -f manifest.yml
+
+- name: to update the assignment yml
+  shell: kubectl apply -f manifest.yml

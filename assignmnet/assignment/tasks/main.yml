@@ -1,0 +1,3 @@
+---
+# tasks file for docker-services
+- include_tasks: assignment.yml

@@ -1,0 +1,8 @@
+---
+
+- hosts: assignment  #13.126.210.185
+  become: yes
+  roles: 
+  - assignment
+#  vars:
+ #   ansible_python_interpreter: /usr/bin/python3
