@@ -1,0 +1,56 @@
+node{
+   stage('SCM Checkout'){
+       git credentialsId: 'git-creds', url: 'https://github.com/$git_hub_user_id/assignment.git'
+   }
+   
+     stage('installing Docker'){                        //Here we can use the Docker Plugin But i used installation Commands,
+   sh label: '', script: '''sudo apt update -y          //while Running this Pipeline multiple We should comment on this stage so Docker installtion commands will ignores on next build.
+sudo apt upgrade -y
+echo Install Prerequisite Packages
+sudo apt-get install curl apt-transport-https ca-certificates software-properties-common -y
+echo Add the Docker Repositories
+echo we add the GPG key, by entering the following command in the command line:
+curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add - 
+echo Next, we add the repository:
+sudo add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" -y
+echo just update the repository information:
+sudo apt update -y
+echo Install Docker on Ubuntu 18.04
+sudo apt install docker-ce -y'''
+
+stage('building_docker_image'){
+sh label: '', script: '''docker build -t assignment -f $HOME/workspace/assignment/Dockerfile .'''
+}
+
+
+stage('Push Docker Image to hub'){
+withCredentials([usernamePassword(credentialsId: 'docker_hub', passwordVariable: 'docker_hub_passwd_id', usernameVariable: 'docker_hub_user_id')]) {
+sh "docker login -u ${docker_hub_user_id} -p ${docker_hub_passwd_id}"   
+
+sh "sudo docker tag angular ${docker_hub_user_id}/assignment"
+  sh "sudo docker push ${docker_hub_user_id}/assignment"
+           
+}
+
+stage('permissions to opt dir in k8'){
+   sh label: '', script: '''ssh $remote_server_k8 chmod 777/opt/'''
+}
+
+stage('Copying the manifest file to k8 nodes'){
+   sh label: '', script: '''scp $HOME/workspace/assignment/assignment.yml $remote_server_k8:/opt  
+}
+
+ stage('Deploying  Docker Image'){
+   sh label: '', script: '''ssh $remote_server_docker docker run -it -p 5000:80 --name assignment assignment'''
+}
+ 
+
+stage('Deploying  httpbin Image in k8'){
+   sh label: '', script: '''ssh $remote_server_docker kubectl create -f assignment.yml'''
+}
+ 
+stage('updating  httpbin Image'){
+   sh label: '', script: '''ssh $remote_server_docker kubectl apply -f assignment.yml'''
+}
+ 
+}
